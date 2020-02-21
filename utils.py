@@ -67,7 +67,30 @@ def loss_cal(S, N, M, type="softmax"):
 
     return total
 
-# def cal_er():
+def cal_er(S, S_ground):
+    # calculating EER
+    diff = 1; EER=0; EER_thres = 0; EER_FAR=0; EER_FRR=0
+
+    # through thresholds calculate false acceptance ratio (FAR) and false reject ratio (FRR)
+    for thres in [0.01*i for i in range(100)]:
+        S_thres = S>thres
+
+        # False acceptance ratio = false acceptance / mismatched population (enroll speaker != verification speaker)
+        FAR = sum([np.sum(S_thres[i])-np.sum(S_thres[i,:,i]) for i in range(config.N)])/(config.N-1)/config.M/config.N
+
+        # False reject ratio = false reject / matched population (enroll speaker = verification speaker)
+        FRR = sum([config.M-np.sum(S_thres[i][:,i]) for i in range(config.N)])/config.M/config.N
+
+        # Save threshold when FAR = FRR (=EER)
+        if diff> abs(FAR-FRR):
+            diff = abs(FAR-FRR)
+            EER = (FAR+FRR)/2
+            EER_thres = thres
+            EER_FAR = FAR
+            EER_FRR = FRR
+
+    print("\nEER : %0.2f (thres:%0.2f, FAR:%0.2f, FRR:%0.2f)"%(EER,EER_thres,EER_FAR,EER_FRR))
+
 
 def attention(inputs, w_omega, b_omega, u_omega, time_major=False, return_alphas=False):
     """
