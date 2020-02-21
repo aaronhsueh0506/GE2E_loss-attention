@@ -74,6 +74,17 @@ class model():
                                             strides=[1,2],
                                             name='pool1')
 
+            conv2 = tf.layers.conv2d(inputs=pool1,
+                                     filters=16,
+                                     kernel_size=[5,5],
+                                     padding='same',
+                                     # activation=tf.nn.relu,
+                                     name='conv2')
+            bn2 = tf.nn.relu(tf.layers.batch_normalization(conv2))
+            pool2 = tf.layers.max_pooling2d(inputs=bn2,
+                                            pool_size=[2,2],
+                                            strides=[1,2],
+                                            name='pool2')
             ### LN-LSTM ###
 #             cells = [tf.contrib.rnn.OutputProjectionWrapper(tf.contrib.rnn.LayerNormBasicLSTMCell(num_units=self.hidden),
 #                                                             output_size=self.em_size) for _ in range(self.n_layer)]
@@ -81,7 +92,8 @@ class model():
             # cells = [tf.contrib.rnn.LSTMCell(num_units = self.hidden, num_proj= self.em_size) for _ in range(self.n_layer)]
             # lstm = tf.contrib.rnn.MultiRNNCell(cells)    # define lstm op and variables
             # outputs, _ = tf.nn.dynamic_rnn(cell=lstm, inputs=self.X, dtype=tf.float32)   # for TI-VS must use dynamic rnn
-
+            cells_fw = []
+            cells_bw = []
             for i in range(n_layer):
                 cell = tf.contrib.rnn.LSTMCell(num_units = self.hidden, num_proj= self.em_size)
                 cells_fw.append(cell)
@@ -89,7 +101,7 @@ class model():
                 cells_bw.append(cell)
             fw = tf.contrib.rnn.MultiRNNCell(cells_fw)
             bw = tf.contrib.rnn.MultiRNNCell(cells_bw)
-            outputs, _ = tf.nn.bidirectional_dynamic_rnn(cells_fw, cells_bw, self.X)
+            outputs, _ = tf.nn.bidirectional_dynamic_rnn(cells_fw, cells_bw, pool2)
 
             embedded = attention(outputs, w_omega, b_omega, u_omega)
             self.embedded = normalize(embedded)                    # normalize
